@@ -2,28 +2,39 @@ package com.volcano.campsite.campground;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.Type;
+import org.hibernate.annotations.TypeDef;
 
-import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.Table;
+import javax.persistence.Id;
+import javax.persistence.Column;
+
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
+import com.vladmihalcea.hibernate.type.array.ListArrayType;
+
 
 @Getter
 @Setter
 @Entity
 @Table(name="reserved_campground")
+@TypeDef(
+        name = "list-array",
+        typeClass = ListArrayType.class
+)
 public class ReservedCampgroundEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name="persistence_id")
     private UUID persistenceId;
 
-    @Column
-    private LocalDate reservationDate;
+    @Column(name="occupied_date")
+    private LocalDate occupiedDate;
 
-    @Column
-    private List<UUID> reservationIds;
+    @Column(name="reservation_ids", columnDefinition = "uuid[]")
+    @Type(type="list-array")
+    private List<UUID> reservationsIds;
 
 }
