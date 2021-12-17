@@ -30,7 +30,7 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     private boolean checkAvailability(List<LocalDate> reservationDates) {
-
+        return true;
     }
 
     private List<LocalDate> getDatesBetween(
