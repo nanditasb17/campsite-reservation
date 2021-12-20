@@ -13,5 +13,7 @@ public interface ReservationService {
 
     UUID createReservation(ReservationDTO reservation);
 
-    ReservationDTO modifyReservation(ReservationDTO reservation);
+    ReservationDTO modifyReservation(UUID reservationId, ReservationDTO reservation);
+
+    void deleteReservation(UUID reservationId);
 }

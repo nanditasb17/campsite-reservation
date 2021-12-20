@@ -59,8 +59,8 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     @Override
-    public ReservationDTO modifyReservation(ReservationDTO updatedReservation) {
-        Optional<ReservationEntity> existingReservation = reservationRepository.findById(updatedReservation.getId());
+    public ReservationDTO modifyReservation(UUID reservationId, ReservationDTO updatedReservation) {
+        Optional<ReservationEntity> existingReservation = reservationRepository.findById(reservationId);
         if(existingReservation.isPresent()) {
             ReservationEntity existingReservationEntity = existingReservation.get();
             LocalDate startDate = updatedReservation.getArrivalDate(), endDate = updatedReservation.getDepartureDate();
@@ -68,8 +68,7 @@ public class ReservationServiceImpl implements ReservationService {
                 if(Helper.isDateRangeValid(startDate, endDate) && checkAvailability(startDate, endDate)) {
                     existingReservationEntity.setArrivalDate(startDate);
                     existingReservationEntity.setDepartureDate(endDate);
-                    //TODO: Update availability service instead of reserving again -- remove old dates and create entity for new dates
-                    availabilityService.reserveCampground(startDate, endDate, existingReservationEntity.getId());
+                    availabilityService.modifyCampgroundReservation(startDate, endDate, existingReservationEntity.getId());
                     reservationRepository.save(existingReservationEntity);
                 }
             }
@@ -77,6 +76,12 @@ public class ReservationServiceImpl implements ReservationService {
             logger.info("Throw exception here - reservation not found");
         }
         return null;
+    }
+
+    @Override
+    public void deleteReservation(UUID reservationId) {
+        availabilityService.deleteReservationId(reservationId);
+        reservationRepository.deleteById(reservationId);
     }
 
     private boolean checkAvailability(LocalDate startDate, LocalDate endDate) {

@@ -10,4 +10,6 @@ public interface AvailabilityService {
     void reserveCampground(LocalDate arrivalDate, LocalDate departureDate, UUID reservationId);
 
     void modifyCampgroundReservation(LocalDate updatedArrivalDate, LocalDate updatedDepartureDate, UUID reservationId);
+
+    void deleteReservationId(UUID reservationId);
 }

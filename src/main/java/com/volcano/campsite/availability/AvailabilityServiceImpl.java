@@ -62,7 +62,21 @@ public class AvailabilityServiceImpl implements AvailabilityService {
 
     @Override
     public void modifyCampgroundReservation(LocalDate updatedArrivalDate, LocalDate updatedDepartureDate, UUID reservationId) {
+        deleteReservationId(reservationId);
+        reserveCampground(updatedArrivalDate, updatedDepartureDate, reservationId);
+    }
 
+    @Override
+    public void deleteReservationId(UUID reservationId) {
+        List<CampgroundAvailabilityEntity> reservedCampgroundsList = campgroundAvailabilityRepository.findBookingsByReservationId(reservationId);
+        reservedCampgroundsList.forEach(entity -> {
+                entity.getReservationIds().removeIf(id -> id.equals(reservationId));
+                if(entity.getReservationIds().size() == 0) {
+                    campgroundAvailabilityRepository.deleteOccupiedDate(entity.getPersistenceId());
+                    reservedCampgroundsList.remove(entity);
+                }
+        });
+        campgroundAvailabilityRepository.saveAll(reservedCampgroundsList);
     }
 
 

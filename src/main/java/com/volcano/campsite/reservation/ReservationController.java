@@ -22,15 +22,21 @@ public class ReservationController {
     @PostMapping("/reservation")
     @ResponseBody
     @ResponseStatus(HttpStatus.CREATED)
-    UUID getReservation(@RequestBody ReservationDTO reservation) {
+    UUID createReservation(@RequestBody ReservationDTO reservation) {
         return reservationService.createReservation(reservation);
     }
 
     @PutMapping("/reservation/{id}")
     @ResponseBody
     @ResponseStatus(HttpStatus.OK)
-    ReservationDTO getReservation(@PathVariable("id") UUID reservationId, @RequestBody ReservationDTO reservation) {
-        return reservationService.modifyReservation(reservation);
+    ReservationDTO updateReservation(@PathVariable("id") UUID reservationId, @RequestBody ReservationDTO reservation) {
+        return reservationService.modifyReservation(reservationId, reservation);
+    }
+
+    @DeleteMapping("/reservation/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    void deleteReservation(@PathVariable("id") UUID reservationId) {
+        reservationService.deleteReservation(reservationId);
     }
 
 }
