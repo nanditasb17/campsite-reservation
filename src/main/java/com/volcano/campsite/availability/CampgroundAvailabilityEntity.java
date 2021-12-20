@@ -1,4 +1,4 @@
-package com.volcano.campsite.campground;
+package com.volcano.campsite.availability;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -24,7 +24,7 @@ import com.vladmihalcea.hibernate.type.array.ListArrayType;
         name = "list-array",
         typeClass = ListArrayType.class
 )
-public class ReservedCampgroundEntity {
+public class CampgroundAvailabilityEntity {
 
     @Id
     @Column(name="persistence_id")
@@ -35,6 +35,6 @@ public class ReservedCampgroundEntity {
 
     @Column(name="reservation_ids", columnDefinition = "uuid[]")
     @Type(type="list-array")
-    private List<UUID> reservationsIds;
+    private List<UUID> reservationIds;
 
 }

@@ -19,10 +19,10 @@ public class ReservationController {
         return reservationService.getReservation(reservationId);
     }
 
-    @PostMapping("/reservation/")
+    @PostMapping("/reservation")
     @ResponseBody
     @ResponseStatus(HttpStatus.CREATED)
-    ReservationDTO getReservation(@RequestBody ReservationDTO reservation) {
+    UUID getReservation(@RequestBody ReservationDTO reservation) {
         return reservationService.createReservation(reservation);
     }
 

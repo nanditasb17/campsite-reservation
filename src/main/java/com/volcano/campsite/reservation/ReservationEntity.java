@@ -37,9 +37,6 @@ public class ReservationEntity {
     @Column(name="email_id")
     private String emailId;
 
-    @Column(name="reserved_campground_id")
-    private Integer reservedCampgroundId;
-
     @Column(name="created_on")
     private LocalDate createdOn;
 

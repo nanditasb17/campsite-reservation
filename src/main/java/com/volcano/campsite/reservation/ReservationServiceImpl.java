@@ -1,6 +1,11 @@
 package com.volcano.campsite.reservation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.volcano.campsite.availability.AvailabilityService;
+import com.volcano.campsite.availability.CampgroundAvailabilityRepository;
+import com.volcano.campsite.common.Helper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,11 +18,16 @@ import java.util.stream.Collectors;
 @Service
 public class ReservationServiceImpl implements ReservationService {
 
+    private static Logger logger = LoggerFactory.getLogger(ReservationServiceImpl.class);
+
     @Autowired
     ObjectMapper objectMapper;
 
     @Autowired
     ReservationRepository reservationRepository;
+
+    @Autowired
+    AvailabilityService availabilityService;
 
     @Override
     public ReservationDTO getReservation(UUID reservationId) {
@@ -26,32 +36,51 @@ public class ReservationServiceImpl implements ReservationService {
         if(reservationEntity.isPresent()) {
             reservationDTO = objectMapper.convertValue(reservationEntity, ReservationDTO.class);
         } else {
-            System.out.println("No reservations with the given id");
+            logger.info("Throw exception here - reservation not found");
         }
         return reservationDTO;
     }
 
     @Override
-    public ReservationDTO createReservation(ReservationDTO reservation) {
-        List<LocalDate> reservationDates = getDatesBetween(reservation.getArrivalDate(), reservation.getDepartureDate());
-        checkAvailability(reservationDates);
-
-
+    public UUID createReservation(ReservationDTO reservation) {
+        LocalDate startDate = reservation.getArrivalDate(), endDate = reservation.getDepartureDate();
+        if(Helper.isDateRangeValid(startDate, endDate) && checkAvailability(startDate, endDate)) {
+            ReservationEntity reservationEntity = objectMapper.convertValue(reservation, ReservationEntity.class);
+            reservationEntity.setCreatedOn(LocalDate.now());
+            reservationEntity.setUpdatedOn(LocalDate.now());
+            reservationEntity.setId(UUID.randomUUID());
+            availabilityService.reserveCampground(startDate, endDate, reservationEntity.getId());
+            reservationRepository.save(reservationEntity);
+            return reservationEntity.getId();
+        } else {
+            logger.info("Throw exception here - dates not available");
+        }
         return null;
-    }
-
-    private boolean checkAvailability(List<LocalDate> reservationDates) {
-        return true;
-    }
-
-    private List<LocalDate> getDatesBetween(
-            LocalDate startDate, LocalDate endDate) {
-        return startDate.datesUntil(endDate)
-                .collect(Collectors.toList());
     }
 
     @Override
-    public ReservationDTO modifyReservation(ReservationDTO reservation) {
+    public ReservationDTO modifyReservation(ReservationDTO updatedReservation) {
+        Optional<ReservationEntity> existingReservation = reservationRepository.findById(updatedReservation.getId());
+        if(existingReservation.isPresent()) {
+            ReservationEntity existingReservationEntity = existingReservation.get();
+            LocalDate startDate = updatedReservation.getArrivalDate(), endDate = updatedReservation.getDepartureDate();
+            if(Helper.isReservationDateChanged(existingReservationEntity, updatedReservation)) {
+                if(Helper.isDateRangeValid(startDate, endDate) && checkAvailability(startDate, endDate)) {
+                    existingReservationEntity.setArrivalDate(startDate);
+                    existingReservationEntity.setDepartureDate(endDate);
+                    //TODO: Update availability service instead of reserving again -- remove old dates and create entity for new dates
+                    availabilityService.reserveCampground(startDate, endDate, existingReservationEntity.getId());
+                    reservationRepository.save(existingReservationEntity);
+                }
+            }
+        } else {
+            logger.info("Throw exception here - reservation not found");
+        }
         return null;
+    }
+
+    private boolean checkAvailability(LocalDate startDate, LocalDate endDate) {
+        List<LocalDate> availableDates = availabilityService.getAvailableDatesInRange(startDate, endDate);
+        return Helper.getAllDatesInRange(startDate, endDate).stream().allMatch(date -> availableDates.contains(date));
     }
 }

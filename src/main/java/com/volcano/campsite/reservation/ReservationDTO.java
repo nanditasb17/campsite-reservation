@@ -17,6 +17,4 @@ public class ReservationDTO {
     private Integer numberPeople;
     private String emailId;
     private UUID reservedCampgroundId;
-    private LocalDate createdOn;
-    private LocalDate updatedOn;
 }
