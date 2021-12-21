@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.volcano.campsite.availability.AvailabilityService;
 import com.volcano.campsite.availability.CampgroundAvailabilityRepository;
 import com.volcano.campsite.common.Helper;
+import com.volcano.campsite.config.CampsiteConfig;
+import com.volcano.campsite.exception.CampsiteErrorCode;
+import com.volcano.campsite.exception.CampsiteException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,22 +32,23 @@ public class ReservationServiceImpl implements ReservationService {
     @Autowired
     AvailabilityService availabilityService;
 
+    @Autowired
+    CampsiteConfig campsiteConfig;
+
     @Override
     public ReservationDTO getReservation(UUID reservationId) {
         Optional<ReservationEntity> reservationEntity = reservationRepository.findById(reservationId);
-        ReservationDTO reservationDTO = new ReservationDTO();
         if(reservationEntity.isPresent()) {
-            reservationDTO = objectMapper.convertValue(reservationEntity, ReservationDTO.class);
+            return objectMapper.convertValue(reservationEntity, ReservationDTO.class);
         } else {
-            logger.info("Throw exception here - reservation not found");
+            throw new CampsiteException(CampsiteErrorCode.RESERVATION_NOT_FOUND);
         }
-        return reservationDTO;
     }
 
     @Override
     public UUID createReservation(ReservationDTO reservation) {
         LocalDate startDate = reservation.getArrivalDate(), endDate = reservation.getDepartureDate();
-        if(Helper.isDateRangeValid(startDate, endDate) && checkAvailability(startDate, endDate)) {
+        if(Helper.isDateRangeValid(startDate, endDate, campsiteConfig) && checkAvailability(startDate, endDate)) {
             ReservationEntity reservationEntity = objectMapper.convertValue(reservation, ReservationEntity.class);
             reservationEntity.setCreatedOn(LocalDate.now());
             reservationEntity.setUpdatedOn(LocalDate.now());
@@ -53,9 +57,8 @@ public class ReservationServiceImpl implements ReservationService {
             reservationRepository.save(reservationEntity);
             return reservationEntity.getId();
         } else {
-            logger.info("Throw exception here - dates not available");
+            throw new CampsiteException(CampsiteErrorCode.DATES_NOT_AVAILABLE);
         }
-        return null;
     }
 
     @Override
@@ -63,19 +66,23 @@ public class ReservationServiceImpl implements ReservationService {
         Optional<ReservationEntity> existingReservation = reservationRepository.findById(reservationId);
         if(existingReservation.isPresent()) {
             ReservationEntity existingReservationEntity = existingReservation.get();
-            LocalDate startDate = updatedReservation.getArrivalDate(), endDate = updatedReservation.getDepartureDate();
-            if(Helper.isReservationDateChanged(existingReservationEntity, updatedReservation)) {
-                if(Helper.isDateRangeValid(startDate, endDate) && checkAvailability(startDate, endDate)) {
-                    existingReservationEntity.setArrivalDate(startDate);
-                    existingReservationEntity.setDepartureDate(endDate);
-                    availabilityService.modifyCampgroundReservation(startDate, endDate, existingReservationEntity.getId());
-                    reservationRepository.save(existingReservationEntity);
+            ReservationEntity updatedReservationEntity = objectMapper.convertValue(updatedReservation, ReservationEntity.class);
+            updatedReservationEntity.setId(reservationId);
+            LocalDate startDate = updatedReservationEntity.getArrivalDate(), endDate = updatedReservationEntity.getDepartureDate();
+
+            if(Helper.isReservationDateChanged(existingReservationEntity, updatedReservationEntity)) {
+                if(Helper.isDateRangeValid(startDate, endDate, campsiteConfig) && checkAvailability(startDate, endDate)) {
+                    availabilityService.modifyCampgroundReservation(startDate, endDate, updatedReservationEntity.getId());
+                } else {
+                    throw new CampsiteException(CampsiteErrorCode.DATES_NOT_AVAILABLE);
                 }
             }
+            logger.info("Updated reservation entity = {}", updatedReservationEntity);
+            reservationRepository.save(updatedReservationEntity);
+            return objectMapper.convertValue(updatedReservationEntity, ReservationDTO.class);
         } else {
-            logger.info("Throw exception here - reservation not found");
+            throw new CampsiteException(CampsiteErrorCode.RESERVATION_NOT_FOUND);
         }
-        return null;
     }
 
     @Override
