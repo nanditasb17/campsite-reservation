@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -27,7 +28,6 @@ public class AvailabilityServiceImpl implements AvailabilityService {
 
     @Override
     public List<LocalDate> getAvailableDatesInRange(LocalDate startDate, LocalDate endDate) {
-        logger.info("MAX Campgrounds = {}", campsiteConfig.getMaxCampgrounds());
         if (startDate == null) {
             startDate = LocalDate.now().plusDays(campsiteConfig.getDefaultStartDayOffset());
         }
@@ -35,14 +35,11 @@ public class AvailabilityServiceImpl implements AvailabilityService {
             endDate = startDate.plusDays(campsiteConfig.getDefaultAvailabilityRangeDays());
         }
         List<LocalDate> allDatesInRange = Helper.getAllDatesInRange(startDate, endDate);
-        logger.info("Searching for dates = {}", allDatesInRange);
         List<CampgroundAvailabilityEntity> bookedCampgrounds = campgroundAvailabilityRepository.findBookingsForDates(allDatesInRange);
-        logger.info("Campgrounds Booked = {}", bookedCampgrounds);
         bookedCampgrounds.removeIf(campground -> campground.getReservationIds() != null && campground.getReservationIds().size() < campsiteConfig.getMaxCampgrounds());
         bookedCampgrounds.forEach(bookedCampground -> {
             allDatesInRange.removeIf(date -> bookedCampground.getOccupiedDate().equals(date));
         });
-        logger.info("Available dates = {}", allDatesInRange);
         return allDatesInRange;
     }
 
@@ -51,11 +48,12 @@ public class AvailabilityServiceImpl implements AvailabilityService {
         List<LocalDate> reservationDates = Helper.getAllDatesInRange(arrivalDate, departureDate);
         List<CampgroundAvailabilityEntity> entityList = campgroundAvailabilityRepository.findBookingsForDates(reservationDates);
         entityList.forEach(entity -> {
-            if(entity.getReservationIds().size() > campsiteConfig.getMaxCampgrounds()) {
+            if(entity.getReservationIds().size() >= campsiteConfig.getMaxCampgrounds()) {
                 throw new CampsiteException(CampsiteErrorCode.DATES_NOT_AVAILABLE);
+            } else {
+                entity.getReservationIds().add(reservationId);
+                reservationDates.removeIf(reservationDate -> entity.getOccupiedDate().equals(reservationDate));
             }
-            entity.getReservationIds().add(reservationId);
-            reservationDates.removeIf(reservationDate -> entity.getOccupiedDate().equals(reservationDate));
         });
         reservationDates.forEach(reservationDate -> {
             CampgroundAvailabilityEntity availabilityEntity = new CampgroundAvailabilityEntity();
@@ -75,7 +73,6 @@ public class AvailabilityServiceImpl implements AvailabilityService {
 
     @Override
     public void deleteReservationId(UUID reservationId) {
-        logger.info("RESERVATION ID TO BE DELETED = {}", reservationId);
         List<CampgroundAvailabilityEntity> reservedCampgroundsList = campgroundAvailabilityRepository.findBookingsByReservationId(reservationId);
         if(reservedCampgroundsList.isEmpty()) {
             throw new CampsiteException(CampsiteErrorCode.RESERVATION_NOT_FOUND);
@@ -83,8 +80,7 @@ public class AvailabilityServiceImpl implements AvailabilityService {
         reservedCampgroundsList.forEach(entity -> {
                 entity.getReservationIds().removeIf(id -> id.equals(reservationId));
                 if(entity.getReservationIds().size() == 0) {
-                    campgroundAvailabilityRepository.deleteOccupiedDate(entity.getPersistenceId());
-//                    reservedCampgroundsList.remove(entity);
+                    campgroundAvailabilityRepository.deleteById(entity.getPersistenceId());
                 }
         });
         campgroundAvailabilityRepository.saveAll(reservedCampgroundsList);

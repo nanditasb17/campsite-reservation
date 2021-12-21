@@ -20,9 +20,4 @@ public interface CampgroundAvailabilityRepository extends JpaRepository<Campgrou
     @Query(value = "SELECT * from reserved_campground where (:reservationId) = ANY(reservation_ids)", nativeQuery = true)
     List<CampgroundAvailabilityEntity> findBookingsByReservationId(@Param("reservationId") UUID reservationId);
 
-    @Transactional
-    @Modifying
-    @Query("DELETE FROM CampgroundAvailabilityEntity c where c.persistenceId=(:persistenceId)")
-    void deleteOccupiedDate(@Param("persistenceId") UUID id);
-
 }
