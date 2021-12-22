@@ -6,8 +6,15 @@ import com.volcano.campsite.exception.CampsiteException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.*;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.Spy;
+import org.mockito.MockitoAnnotations;
+import org.mockito.InjectMocks;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.time.LocalDate;
@@ -78,8 +85,54 @@ class AvailabilityServiceTest {
     }
 
     @Test
-    void testDeleteCampgroundReservation() {
+    void testModifyCampground() {
+        Mockito.when(campgroundAvailabilityRepository.saveAll(any(List.class))).thenReturn(getTestAvailabilityEntitiesFullyBooked());
 
+        List<CampgroundAvailabilityEntity> testEntities = getTestAvailabilityEntitiesInRange(LocalDate.now().plusDays(1), LocalDate.now().plusDays(3));
+        UUID reservationId = UUID.randomUUID();
+        UUID persistenceId = UUID.randomUUID();
+        List<UUID> reservationIds = new ArrayList<>();
+        reservationIds.add(reservationId);
+        testEntities.forEach(entity -> {
+            entity.setReservationIds(reservationIds);
+            entity.setPersistenceId(persistenceId);
+        });
+        Mockito.when(campgroundAvailabilityRepository.findBookingsByReservationId(any(UUID.class)))
+                .thenReturn(testEntities);
+        Mockito.doNothing().when(campgroundAvailabilityRepository).deleteById(persistenceId);
+        Assertions.assertDoesNotThrow(() -> availabilityService.modifyCampgroundReservation(LocalDate.now().plusDays(2), LocalDate.now().plusDays(4), reservationId));
+
+    }
+
+    @Test
+    void testDeleteCampgroundReservation() {
+        Mockito.when(campgroundAvailabilityRepository.saveAll(any(List.class))).thenReturn(getTestAvailabilityEntitiesFullyBooked());
+
+        List<CampgroundAvailabilityEntity> testEntities = getTestAvailabilityEntitiesInRange(LocalDate.now().plusDays(1), LocalDate.now().plusDays(3));
+        UUID reservationId = UUID.randomUUID();
+        UUID persistenceId = UUID.randomUUID();
+        List<UUID> reservationIds = new ArrayList<>();
+        reservationIds.add(reservationId);
+        testEntities.forEach(entity -> {
+            entity.setReservationIds(reservationIds);
+            entity.setPersistenceId(persistenceId);
+        });
+        Mockito.when(campgroundAvailabilityRepository.findBookingsByReservationId(any(UUID.class)))
+                .thenReturn(testEntities);
+        Mockito.doNothing().when(campgroundAvailabilityRepository).deleteById(persistenceId);
+
+        Assertions.assertDoesNotThrow(() -> availabilityService.deleteReservationId(reservationId));
+        Mockito.verify(campgroundAvailabilityRepository, times(testEntities.size())).deleteById(persistenceId);
+    }
+
+    @Test
+    void testDeleteCampgroundReservationInvalidReservation() {
+        UUID reservationId = UUID.randomUUID();
+        Mockito.when(campgroundAvailabilityRepository.findBookingsByReservationId(any(UUID.class)))
+                .thenReturn(new ArrayList<>());
+        Mockito.doNothing().when(campgroundAvailabilityRepository).deleteById(reservationId);
+        Assertions.assertThrows(new CampsiteException(CampsiteErrorCode.RESERVATION_NOT_FOUND).getClass(),
+                () -> availabilityService.deleteReservationId(reservationId));
     }
 
     List<CampgroundAvailabilityEntity> getTestAvailabilityEntitiesFullyBooked() {

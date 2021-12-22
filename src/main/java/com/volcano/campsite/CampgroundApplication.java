@@ -12,7 +12,6 @@ public class CampgroundApplication {
     private JdbcTemplate jdbcTemplate;
 
     public static void main(String[] args) {
-        System.out.println("Environment port = " + System.getProperty("server.port"));
         SpringApplication.run(CampgroundApplication.class, args);
     }
 

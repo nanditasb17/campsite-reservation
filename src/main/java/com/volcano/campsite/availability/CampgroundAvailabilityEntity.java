@@ -5,10 +5,7 @@ import lombok.Setter;
 import org.hibernate.annotations.Type;
 import org.hibernate.annotations.TypeDef;
 
-import javax.persistence.Entity;
-import javax.persistence.Table;
-import javax.persistence.Id;
-import javax.persistence.Column;
+import javax.persistence.*;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -36,5 +33,8 @@ public class CampgroundAvailabilityEntity {
     @Column(name="reservation_ids", columnDefinition = "uuid[]")
     @Type(type="list-array")
     private List<UUID> reservationIds;
+
+    @Version
+    private Integer version;
 
 }

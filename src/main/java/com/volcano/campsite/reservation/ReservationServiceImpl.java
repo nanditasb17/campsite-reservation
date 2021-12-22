@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -19,6 +20,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
+@EnableTransactionManagement
 public class ReservationServiceImpl implements ReservationService {
 
     private static Logger logger = LoggerFactory.getLogger(ReservationServiceImpl.class);
@@ -39,7 +41,7 @@ public class ReservationServiceImpl implements ReservationService {
     public ReservationDTO getReservation(UUID reservationId) {
         Optional<ReservationEntity> reservationEntity = reservationRepository.findById(reservationId);
         if(reservationEntity.isPresent()) {
-            return objectMapper.convertValue(reservationEntity, ReservationDTO.class);
+            return objectMapper.convertValue(reservationEntity.get(), ReservationDTO.class);
         } else {
             throw new CampsiteException(CampsiteErrorCode.RESERVATION_NOT_FOUND);
         }
